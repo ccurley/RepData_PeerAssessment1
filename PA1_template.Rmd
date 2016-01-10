@@ -8,28 +8,33 @@ output:
 ---
 
 ## Loading and preprocessing the data
-I forked the repository for the [class](https://github.com/rdpeng/RepData_PeerAssessment1) on Saturday, 8 January 2016.
+1. load the data
+2. Process/tranform the data (if necessary) into a format suitable for analysis.
 
-The following code will check to see if the .zip file is in the repository. If so, then unzip the file to a csv. 
+I forked the repository for the [class](https://github.com/rdpeng/RepData_PeerAssessment1) on Saturday, 8 January 2016.
 
 Note that I set the working directory is set to the RepData_PeerAssessment1 repository in GitHub.
 
 ```{r unzipdata}
+# Check to see if the zipfile file exists, if it does unzip it
+# Note that the working direcory is set to the RepData_PeerAssessment1 repository in GitHub
 if(file.exists("activity.zip")) {
         unzip("activity.zip")
 } else {
         print("activity.zip not found. Check default working directory")
 }
 ```
-Check to see if the .csv file has been unzipped. If so, Read the unzipped file into a data frame called fitdata.
 
 ```{r loaddata}
+# Check to see if the csv file exists, if it does read it into a df named fitdata
+
 if(file.exists("activity.csv")) {
         fitdata <- read.csv("activity.csv")
 } else {
         print("activity.cvs not found. Check default working directory or unzip activity.zip")
 }
 ```
+
 The result should be a dataframe with 17,568 observations of 3 variables with the following characteristics:
 
 ```{r fitsummary}
@@ -55,51 +60,49 @@ sum(is.na(fitdata$steps)) / nrow(fitdata)
 ```
 
 ## What is mean total number of steps taken per day?
-To calculate the mean total steps taken per day, I applied two methods. The first calls my preferred method *ddply* to produce a data frame. However, I'm told it's more R-ish to call *tapply* to produce an array, so I called tapply as well so my friends would get off my back about it.
+For this part of the assignment, you can ignore the missing values in the dataset.
+
+1. Make a histogram of the total number of steps taken each day
 
 ```{r fitmeansteps}
+# To calculate the mean total steps taken per day, I applied two methods. The first calls my preferred method 
+# *ddply* to produce a data frame. You can do this with  with(fitdata, tapply(steps, date, FUN = mean, na.rm = FALSE))
+# also.
 library(plyr)
 library(dplyr)
 totalsteps <- ddply(fitdata, .(date), summarize, mean.total.steps = mean(steps))
-totalsteps
+
 hist(totalsteps$mean.total.steps, xlab = "total steps daily - ddply")
+```
+
+2. Calculate and report the mean and the median total number of steps taken per day.
+
+```{r meanandmedian}
 mean(totalsteps$mean.total.steps, na.rm = TRUE)
 median(totalsteps$mean.total.steps, na.rm = TRUE)
 ```
- 
-or
-
-```{r fitmeanstepsother}
-othertotalsteps <- with(fitdata, tapply(steps, date, FUN = mean, na.rm = FALSE))
-othertotalsteps
-hist(othertotalsteps, xlab = "total steps daily - ttaply")
-mean(othertotalsteps, na.rm = TRUE)
-median(othertotalsteps, na.rm = TRUE)
-```
-
-There are, apparently, multiple stones to kill one bird.
 
 ## What is the average daily activity pattern?
-To calculate the daily activity pattern by interval, I perform the same operation for the daily averages only grouping by interval
+1. Make a time series plot (i.e. type = "l") of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all days (y-axis)
+
 ```{r intervalsteps}
+# calcuate the interval steps by summarizing the mean of steps grouped by interval
 library(plyr)
 library(dplyr)
 intervalsteps <- ddply(fitdata, .(interval), summarize, mean.interval.steps = mean(steps, na.rm = TRUE))
-intervalsteps
+
 with(intervalsteps, plot(interval, mean.interval.steps, type = "l"))
 ```
 
-Now, I need to find the 5-minute interval5-minute interval, on average across all the days in the dataset, contains the maximum number of steps. 
-
-Note to self for future reference: in my first run at this I tried *"with(intervalsteps, which.max(mean.interval.steps))"*, which gave me the row number, but not interval or the mean value in steps. So, instead of putting in a second statement subsetting to the row (which could vary), I collapsed the *which.max* into the subset so it would wouldn't be fixed to row 104.
-
+2. Which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps?
 
 ```{r maxintervalsteps}
+# find the max number from the mean.interval.steps by subsetting using which.max
 intervalsteps[which.max(intervalsteps$mean.interval.steps),]
 ```
 
 ## Inputing missing values
-What are the missing values? To be thorough, I checked to makes sure there were no missing dates or intervals, but I wasn't expecting to see any.
+1. Calculate and report the total number of missing values in the dataset (i.e. the total number of rows with NAs)
 
 ```{r summissing}
 sum(is.na(fitdata$steps))
@@ -107,26 +110,35 @@ sum(is.na(fitdata$date))
 sum(is.na(fitdata$interval))
 ```
 
-Since the exercise is open ended and there are zero values for data, I'm going to say if it's an "NA" then go ahead and stick a 0 in it. I know: I could merge the meaninterval df to the fitdata df, and then loop through it replacing the mean for the interval with the NAs. But, this is my "Snape's 'Just stick a bezoar down his throat!" approach to the assignment -- Professor Snape being smarter than the rest of us.
+2. Devise a strategy for filling in all of the missing values in the dataset. The strategy does not need to be sophisticated. For example, you could use the mean/median for that day, or the mean for that 5-minute interval, etc.
+
+3. Create a new dataset that is equal to the original dataset but with the missing data filled in.
 
 ```{r skewit}
+# Push fitdata to a new data frame I can corrupt at will
 fitdataskewed <- fitdata
+
+# The excercise says devise a strategy, and here's mine: 
+# rather than looping through the table and jamming in the mean val,
+# I'm going to assume that NA is 0 since having no data can be seen as having a value of none.
+# Like Snape wrote in his potions textbook, "Just stick a bezoar down his throat!"
 fitdataskewed[is.na(fitdataskewed),1] <- 0
+nrow(fitdata)
+nrow(fitdataskewed)
 ```
 
-And, so if we replot it:
+4. Make a histogram of the total number of steps taken each day and Calculate and report the mean and median total number of steps taken per day. Do these values differ from the estimates from the first part of the assignment? What is the impact of imputing missing data on the estimates of the total daily number of steps?
 
 ```{r skewedsteps}
 library(plyr)
 library(dplyr)
 skewedsteps <- ddply(fitdataskewed, .(date), summarize, mean.total.steps = mean(steps))
-skewedsteps
 hist(skewedsteps$mean.total.steps, xlab = "total skewed steps daily - ddply")
 mean(skewedsteps$mean.total.steps, na.rm = TRUE)
 median(skewedsteps$mean.total.steps, na.rm = TRUE)
 ```
 
-The skewed values, not surprisingly, increase the "0" count in the histogram and lower the mean and median, since we're introducing more zero values to the dataset.
+The skewed values, not surprisingly, increase the "0" count in the histogram and lower the mean and median, since we're introducing more zero values to the dataset. The means falls about 5% and and the meadian fall about 1%.
 
 
 ## Are there differences in activity patterns between weekdays and weekends?
@@ -136,7 +148,10 @@ For this, I've pulled heavily on Stackoverflow for the simplest and fastest answ
 
 To answer the question whether there are differences in patterns, I just need to tack a "week end" or "week day" designation to the fitdata df.  
 
-```{r lousyplottingsolution}
+1. Create a new factor variable in the dataset with two levels -- "weekday" and "weekend" indicating whether a given date is a weekday or weekend day.
+
+```{r loudyweekidsolution}
+# Thank you stackoverflow....
 weekday <- function(date) {
     if (weekdays(as.Date(date)) %in% c("Saturday", "Sunday")) {
         "weekend"
@@ -145,12 +160,22 @@ weekday <- function(date) {
     }
 }
 
-fitdata$weekday <- as.factor(sapply(fitdata$date, weekday))
+# New factor, and it's applied to the skewed data frame.
+fitdataskewed$weekday <- as.factor(sapply(fitdata$date, weekday))
 
-par(mfrow = c(2, 1))
-for (type in c("weekend", "weekday")) {
-    dataout <- aggregate(steps ~ interval, data = fitdata, subset = fitdata$weekday == type, FUN = mean)
-    plot(dataout, type = "l", main = type)
-}
+# Create a data set that calcuates the mean steps grouped by weekday, then grouped by interval
+weeksteps <- ddply(fitdataskewed, .(weekday, interval), summarize, mean.total.steps = mean(steps))
 ```
-It does appear that people are more active in the middle intervals on the weekends compared to the weekdays.
+
+
+2. Make a panel plot containing a time series plot (i.e. type = "l") of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all weekday days or weekend days (y-axis).
+
+```{r lousyplottingsolution}
+# Create two line diagrams, facet the plot by weekend. Note, there was a discussion on stackoverflow 
+# about how to do this with 'plot' without using facets by putting the plot statement in a for loop 
+# forked by 'weekend' or 'weekday'. Crazy thing worked. Go back to the first commit for code in action.
+library(ggplot2)
+ggplot(weeksteps, aes(x=interval, y=mean.total.steps)) + geom_line() + facet_wrap( ~ weekday, scales = "free", nrow = 2)
+```
+
+There appears to be greater activity across the mid-day intervals relative to the weekday, which is not unexpected.
